@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Energía Eólica</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--primary:#1769aa;--green:#18a66a;--yellow:#f2b84b;--border:#e4e9f0}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#0b4168,#1487a8);color:white;padding:26px 5%;display:flex;justify-content:space-between;align-items:center;gap:20px}
+header h1{margin:0 0 6px;font-size:28px}header p{margin:0;opacity:.88}
+.badge{background:#ffffff20;border:1px solid #ffffff40;padding:10px 14px;border-radius:20px}
+.container{width:min(1200px,92%);margin:24px auto}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 5px 18px #17324d0b}
+.metric .label{color:var(--muted);font-size:14px}.metric .value{font-size:28px;font-weight:700;margin:8px 0}.metric .small{font-size:12px;color:var(--green)}
+.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:7px}input,select{width:100%;padding:11px;border:1px solid #ccd5df;border-radius:9px;background:white;font-size:14px}
+button{border:0;border-radius:9px;padding:11px 15px;background:#1769aa;color:white;cursor:pointer;font-weight:600}button:hover{filter:brightness(.94)}
+.charts{display:grid;grid-template-columns:2fr 1fr;gap:16px}.chartbox{height:330px}.chartbox canvas{width:100%!important;height:100%!important}
+.section-title{margin:28px 0 14px}.section-title h2{margin:0 0 5px}.section-title p{margin:0;color:var(--muted)}
+table{width:100%;border-collapse:collapse}.table-wrap{overflow:auto}th,td{padding:11px;text-align:right;border-bottom:1px solid var(--border);font-size:13px}th:first-child,td:first-child{text-align:left}th{color:var(--muted);background:#f8fafc}
+.status{display:inline-flex;align-items:center;gap:7px}.dot{width:9px;height:9px;border-radius:50%;background:var(--green)}
+.wind{height:210px;position:relative;overflow:hidden;border-radius:14px;background:linear-gradient(#bcecff,#eefaff 65%,#78c46b 66%);margin-top:20px}
+.turbine{position:absolute;left:50%;bottom:30px;width:10px;height:125px;background:#edf1f5;transform:translateX(-50%);border-radius:5px}.hub{position:absolute;top:47px;left:50%;width:18px;height:18px;background:#dce5ec;border-radius:50%;transform:translate(-50%,-50%);z-index:2}
+.blades{position:absolute;top:47px;left:50%;width:120px;height:120px;transform:translate(-50%,-50%);animation:spin 4s linear infinite}.blade{position:absolute;left:56px;top:56px;width:7px;height:58px;background:#f7fbff;border-radius:7px;transform-origin:50% 0}
+.b1{transform:rotate(0deg)}.b2{transform:rotate(120deg)}.b3{transform:rotate(240deg)}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+footer{text-align:center;color:var(--muted);padding:25px}
+@media(max-width:850px){.grid,.controls,.charts{grid-template-columns:1fr 1fr}.charts{grid-template-columns:1fr}.chartbox{height:280px}}
+@media(max-width:560px){.grid,.controls{grid-template-columns:1fr}header{display:block}.badge{display:inline-block;margin-top:15px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>⚡ Sistema de Energía Eólica</h1><p>Panel de monitoreo y análisis de generación eléctrica</p></div>
+  <div class="badge"><span class="status"><span class="dot"></span> Sistema operativo</span></div>
+</header>
+
+<main class="container">
+  <section class="grid">
+    <div class="card metric"><div class="label">Potencia actual</div><div class="value" id="power">2.84 MW</div><div class="small">↑ 8.4% vs. ayer</div></div>
+    <div class="card metric"><div class="label">Energía generada hoy</div><div class="value" id="energy">38.6 MWh</div><div class="small">Objetivo: 45 MWh</div></div>
+    <div class="card metric"><div class="label">Velocidad del viento</div><div class="value" id="windSpeed">8.7 m/s</div><div class="small">Condición favorable</div></div>
+    <div class="card metric"><div class="label">Eficiencia</div><div class="value" id="efficiency">86.2%</div><div class="small">Rendimiento del parque</div></div>
+  </section>
+
+  <div class="section-title"><h2>Configuración</h2><p>Modifica los parámetros para simular el comportamiento del sistema.</p></div>
+  <section class="card controls">
+    <div><label>Velocidad del viento (m/s)</label><input id="windInput" type="range" min="0" max="20" step=".1" value="8.7"><div id="windVal">8.7 m/s</div></div>
+    <div><label>Número de aerogeneradores</label><input id="turbinesInput" type="number" min="1" max="100" value="12"></div>
+    <div><label>Potencia nominal por turbina (MW)</label><input id="ratedInput" type="number" min=".1" max="10" step=".1" value="3"></div>
+    <div><label>Factor de capacidad (%)</label><input id="capacityInput" type="number" min="1" max="100" value="86"></div>
+  </section>
+
+  <div class="section-title"><h2>Visualización del parque</h2><p>Representación animada del aerogenerador y sus condiciones de viento.</p></div>
+  <section class="card wind">
+    <div class="turbine"></div><div class="hub"></div>
+    <div class="blades"><div class="blade b1"></div><div class="blade b2"></div><div class="blade b3"></div></div>
+  </section>
+
+  <div class="section-title"><h2>Gráficas de operación</h2><p>Datos simulados para análisis energético.</p></div>
+  <section class="charts">
+    <div class="card chartbox"><canvas id="powerChart"></canvas></div>
+    <div class="card chartbox"><canvas id="windChart"></canvas></div>
+  </section>
+
+  <div class="section-title"><h2>Producción estimada por hora</h2><p>La tabla se actualiza con los parámetros seleccionados.</p></div>
+  <section class="card table-wrap">
+    <table><thead><tr><th>Hora</th><th>Viento</th><th>Potencia</th><th>Energía</th><th>Estado</th></tr></thead><tbody id="dataTable"></tbody></table>
+  </section>
+</main>
+<footer>Sistema de Energía Eólica · Aplicación educativa de simulación</footer>
+
+<script>
+const hours=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+const windInput=document.getElementById('windInput'), turbinesInput=document.getElementById('turbinesInput'), ratedInput=document.getElementById('ratedInput'), capacityInput=document.getElementById('capacityInput');
+let powerChart,windChart;
+
+function calcPower(v){
+  const turbines=Math.max(1,+turbinesInput.value||1), rated=Math.max(.1,+ratedInput.value||.1);
+  const theoretical=turbines*rated;
+  const curve=Math.min(1,Math.max(0,(v-3)/9));
+  return theoretical*curve*curve*curve*(+capacityInput.value/100);
+}
+function makeData(){
+  const base=+windInput.value;
+  const winds=hours.map((_,i)=>Math.max(2.5,base+2*Math.sin((i-5)/3)+1.1*Math.sin(i*1.7)));
+  const powers=winds.map(calcPower);
+  return {winds,powers};
+}
+function update(){
+  const {winds,powers}=makeData();
+  const avgPower=powers.reduce((a,b)=>a+b,0)/powers.length;
+  const energy=powers.reduce((a,b)=>a+b,0);
+  const efficiency=Math.min(99.9,(+capacityInput.value)*(Math.min(1,avgPower/(Math.max(0.1,(+turbinesInput.value)*(+ratedInput.value))))));
+  document.getElementById('power').textContent=avgPower.toFixed(2)+' MW';
+  document.getElementById('energy').textContent=energy.toFixed(1)+' MWh';
+  document.getElementById('windSpeed').textContent=baseValue()+' m/s';
+  document.getElementById('efficiency').textContent=efficiency.toFixed(1)+'%';
+  document.getElementById('windVal').textContent=baseValue()+' m/s';
+
+  powerChart.data.datasets[0].data=powers;
+  windChart.data.datasets[0].data=winds;
+  powerChart.update(); windChart.update();
+
+  const tbody=document.getElementById('dataTable'); tbody.innerHTML='';
+  hours.forEach((h,i)=>{
+    const tr=document.createElement('tr');
+    const state=winds[i]>=6?'Óptimo':winds[i]>=3?'Moderado':'Bajo';
+    tr.innerHTML=`<td>${String(h).padStart(2,'0')}:00</td><td>${winds[i].toFixed(1)} m/s</td><td>${powers[i].toFixed(2)} MW</td><td>${powers[i].toFixed(2)} MWh</td><td>${state}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function baseValue(){return (+windInput.value).toFixed(1)}
+powerChart=new Chart(document.getElementById('powerChart'),{type:'line',data:{labels:hours.map(h=>h+':00'),datasets:[{label:'Potencia (MW)',data:[],borderWidth:3,tension:.35,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Potencia generada durante el día'}},scales:{y:{beginAtZero:true}}}});
+windChart=new Chart(document.getElementById('windChart'),{type:'bar',data:{labels:hours.map(h=>h+':00'),datasets:[{label:'Viento (m/s)',data:[],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Velocidad del viento'}},scales:{y:{beginAtZero:true}}}});
+[windInput,turbinesInput,ratedInput,capacityInput].forEach(x=>x.addEventListener('input',update));
+update();
+</script>
+</body>
+</html>
